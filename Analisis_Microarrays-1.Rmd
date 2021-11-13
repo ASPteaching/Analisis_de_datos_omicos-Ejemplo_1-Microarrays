@@ -1,18 +1,18 @@
 ---
 title: "Análisis de microarrays con R"
 author: "Alex Sánchez"
-date: "`r Sys.Date()`"
+date: "2021"
 output:
- prettydoc::html_pretty:
+   html_document:
+    code_folding: hide
     toc: true
-    theme: cayman
-    highlight: github
+    toc_depth: 3
+    theme: cerulean
+    highlight: textmate
     number_sections: true
- pdf_document:
-    toc: true
-    toc_depth: 2
 editor_options: 
   chunk_output_type: console
+# theme args should be one of: "default", "cerulean", "journal", "flatly", "darkly", "readable", "spacelab", "united", "cosmo", "lumen", "paper", "sandstone", "simplex", "yeti"
 ---
 
 
@@ -22,7 +22,7 @@ library(rmdformats)
 
 ## Global options
 options(max.print="75")
-opts_chunk$set(echo=FALSE,
+opts_chunk$set(echo=TRUE,
 	             cache=FALSE,
                prompt=FALSE,
                tidy=TRUE,
@@ -36,7 +36,7 @@ opts_knit$set(width=75)
 
 Estudio del efecto de la inducción de neuronas dopaminérgicas en fibroblastos de ratones. Basado en un estudio cuyos datos se han repositado GEO con el identificador GDS4155.
 
-![](images/paste-7E8C7C33.png)
+![Descripción del estudio](images/paste-7E8C7C33.png)
 
 ```{r directorios}
 workingDir <-getwd()
@@ -63,7 +63,6 @@ installifnot("annotate")
 installifnot("xtable")
 installifnot("gplots")
 installifnot("GOstats")
-installifnot("gplots")
 ```
 
 # Lectura de los datos
@@ -87,7 +86,7 @@ sampleColor <- as.character(targetsDF$Colors)
 targets <- AnnotatedDataFrame(targetsDF)
 ```
 
-Al leer los archivos .CEL aportamos la información que contiene el objeto targets
+Al leer los archivos .CEL aportamos la información que contiene el objeto "targets".
 
 ```{r leeCELFiles}
 CELfiles <- targetsDF$fileName
@@ -95,7 +94,7 @@ rawData <- read.celfiles(file.path(dataDir,CELfiles), phenoData=targets)
 rawData
 ```
 
-# Control de calidad
+# Exploración y control de calidad
 
 ## Con funciones "ad-hoc"
 
@@ -108,8 +107,7 @@ boxplot(rawData, which="all",las=2, main="Intensity distribution of RAW data",
 ```{r graficosCalidad2}
 #HIERARQUICAL CLUSTERING
 clust.euclid.average <- hclust(dist(t(exprs(rawData))),method="average")
-plot(clust.euclid.average, labels=sampleNames, main="Hierarchical clustering of RawData", 
-     cex=0.7,  hang=-1)
+plot(clust.euclid.average, labels=sampleNames, main="Hierarchical clustering of RawData", cex=0.7,  hang=-1)
 ```
 
 ```{r graficosCalidad3}
@@ -168,11 +166,12 @@ eset
 
 # Filtrado
 
+
 ```{r filtrado}
 library(genefilter)
 annotation(eset) <- "mogene10sttranscriptcluster.db"
 eset_filtered <- nsFilter(eset, var.func=IQR,
-         var.cutoff=0.75, var.filter=TRUE,
+         var.cutoff=0.75, var.filter=TRUE, require.entrez = TRUE,
          filterByQuantile=TRUE)
 #NUMBER OF GENES REMOVED
 print(eset_filtered)
@@ -273,7 +272,7 @@ print(xtable(topTab,align="lllllll"),type="html",html.table.attributes="",
 
 ```{r volcanoPlot}
 genenames <- AnnotationDbi::select(mogene10sttranscriptcluster.db, 
-                    rownames(fit.main1), c("SYMBOL"))
+                    rownames(fit.main1), c("SYMBOL"))$SYMBOL
 volcanoplot(fit.main1, highlight=10, names=genenames, 
             main = paste("Differentially expressed genes", colnames(cont.matrix1), sep="\n"))
 abline(v = c(-3, 3))
@@ -311,6 +310,24 @@ heatmap.2(selectedData,
           ColSideColors=c(rep("red",4),rep("blue",4)),
           tracecol=NULL,
           srtCol=30)
+pdf(file.path(resultsDir,"Heatmap.pdf"))
+heatmap.2(selectedData,
+          Rowv=TRUE,
+          Colv=TRUE,
+          main="HeatMap Induced.vs.WT FC>=3",
+          scale="row",
+          col=my_palette,
+          sepcolor="white",
+          sepwidth=c(0.05,0.05),
+          cexRow=0.5,
+          cexCol=0.9,
+          key=TRUE,
+          keysize=1.5,
+          density.info="histogram",
+          ColSideColors=c(rep("red",4),rep("blue",4)),
+          tracecol=NULL,
+          srtCol=30)
+dev.off()
 ```
 
 # Análisis de significación biológica
