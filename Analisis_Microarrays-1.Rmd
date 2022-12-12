@@ -1,7 +1,6 @@
 ---
 title: "Análisis de microarrays con R"
 author: "Alex Sánchez"
-date: "2021"
 output:
    html_document:
     code_folding: hide
@@ -12,9 +11,9 @@ output:
     number_sections: true
 editor_options: 
   chunk_output_type: console
+bibliography: ADOreferences.bib
 # theme args should be one of: "default", "cerulean", "journal", "flatly", "darkly", "readable", "spacelab", "united", "cosmo", "lumen", "paper", "sandstone", "simplex", "yeti"
 ---
-
 
 ```{r class.source = 'fold-hide', setup, include=FALSE}
 library(knitr)
@@ -34,9 +33,23 @@ opts_knit$set(width=75)
 
 # Introducción
 
-Estudio del efecto de la inducción de neuronas dopaminérgicas en fibroblastos de ratones. Basado en un estudio cuyos datos se han repositado GEO con el identificador GDS4155.
+Este documento presenta un análisis *básico* de datos de microarrays para dar respuesta a un problema biológico.
+
+Cada paso del análisis se podría llevar a cabo de distintas formas, lo que podría dar lugar a resultados algo diferentes, pero para facilitar la visión de conjunto, esta diversidad no se presenta ni se discute en este documento, optando por un workflow estandar basado en métodos y herramientas bien consolidados.
+
+## El problema biológico
+
+En este caso analizaremos los datos producidos por en un estudio del efecto de la inducción de neuronas dopaminérgicas en fibroblastos de ratones que han sido repositados en [GEO](<https://www.ncbi.nlm.nih.gov/geo/>) con el identificador [GDS4155](<https://www.ncbi.nlm.nih.gov/sites/GDSbrowser?acc=GDS4155>).
 
 ![Descripción del estudio](images/paste-7E8C7C33.png)
+## Preparación del sistema: directorios y paquetes
+
+Aunque no es estrictamente necesario es "buena práctica" organizar los proyectos de una forma determinada para facilitar su gestioón y la reproducibilidad de los mismos.
+
+Esto puede hacerse: 
+- Creando directorios específicos para datos y resultados
+- Verificando la disponibilidad de las librerías necesarias al principio de la ejecución
+- Organizando todo el trabajo dentro de un proyecto de Rstudio que esté bajo _control de versiones_ en github.
 
 ```{r directorios}
 workingDir <-getwd()
@@ -52,6 +65,7 @@ installifnot <- function (pkg){
     BiocManager::install(pkg)
   }
 }
+# BiocManager::install() # Actualiza paquetes instalados
 installifnot("pd.mogene.1.0.st.v1")
 installifnot("mogene10sttranscriptcluster.db")
 installifnot("oligo")
@@ -166,7 +180,6 @@ eset
 
 # Filtrado
 
-
 ```{r filtrado}
 library(genefilter)
 annotation(eset) <- "mogene10sttranscriptcluster.db"
@@ -180,7 +193,7 @@ print(eset_filtered)
 print(eset_filtered$eset)
 ```
 
-La matriz de datos filtrados se extrae del objeto `filtered$eset$ y se utilizará en los pasos siguientes.
+La matriz de datos filtrados se extrae del objeto \`filtered$eset$ y se utilizará en los pasos siguientes.
 
 ```{r Datosfiltrados}
 filteredEset <- eset_filtered$eset
@@ -238,16 +251,15 @@ head(topTab)
 
 Obtenemos los identificadores ENTREZ y GENE SYMBOL correspondientes a los probesets (identificados con los id de la compañía que produjo el microarray) que aparecen en la tabla de resultados.
 
-
 ```{r}
 library(mogene10sttranscriptcluster.db)
 keytypes(mogene10sttranscriptcluster.db)
 anotaciones<- AnnotationDbi::select (mogene10sttranscriptcluster.db, keys=rownames(filteredData), columns=c("ENTREZID", "SYMBOL"))
 ```
 
-Añadimos las columnas de anotaciones a la "topTable". 
+Añadimos las columnas de anotaciones a la "topTable".
 
-Aunque esto se puede hacer de muchas formas utilizamos la metodología de concatenar las instrucciones usando "pipes" (%>%) y funciones del paquete `dplyr` que simplifican la lectura.
+Aunque esto se puede hacer de muchas formas utilizamos la metodología de concatenar las instrucciones usando "pipes" (%\>%) y funciones del paquete `dplyr` que simplifican la lectura.
 
 ```{r}
 library(dplyr)
@@ -336,8 +348,8 @@ A título ilustrativo realizaremos un análisis de enriquecimiento ("Over-Repres
 
 Para el análisis necesitamos dos colecciones de genes
 
-- La lista seleccionada
-- El _universo de genes_ es decir todos los genes que se han incluído en el análisis (hay quien pone todos los del chip o todos los del genoma).
+-   La lista seleccionada
+-   El *universo de genes* es decir todos los genes que se han incluído en el análisis (hay quien pone todos los del chip o todos los del genoma).
 
 La mayoría de programas necesitan que los identificadores de los genes sean en formato "ENTREZ" por lo que prepararemos ambas listas a la vez (aunque ya teníamos la de los genes seleccionados).
 
@@ -361,9 +373,9 @@ En este ejemplo usamos "GOstats", que fue uno de los primeros paquetes disponibl
 
 La idea para usarlo es bastante simple: necesitamos crear un tipo especial de objeto llamado "Hiperparámetro" que puede ser de clase:
 
-- `GOHyperGParams` para hacer un análisis basado en la Gene Ontology,
-- `KEGGHyperGParams` para hacer un análisis basado en la base de datos REACTOMA,
-- `PFAMHyperGParams` para basar el análisis en la base de daos PFAM.
+-   `GOHyperGParams` para hacer un análisis basado en la Gene Ontology,
+-   `KEGGHyperGParams` para hacer un análisis basado en la base de datos REACTOMA,
+-   `PFAMHyperGParams` para basar el análisis en la base de daos PFAM.
 
 ```{r createHyperparameter}
 library(GOstats)
@@ -386,10 +398,8 @@ head(summary(GOhyper))
 dim(summary(GOhyper))
 ```
 
-
 ```{r ORAreport}
 # Creamos un informe html con los resultados
 GOfilename =file.path(resultsDir, "GOResults.html")
 htmlReport(GOhyper, file = GOfilename, summary.args=list("htmlLinks"=TRUE))
 ```
-
